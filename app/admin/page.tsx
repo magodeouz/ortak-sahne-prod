@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,72 +12,200 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Save, Eye } from "lucide-react"
-import Link from "next/link"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Plus, Edit, Trash2, Save, Eye, LogOut } from "lucide-react"
+import { EventsService, Event } from "@/lib/events"
+import { uploadEventImage } from "@/lib/storage"
+import { supabase } from "@/lib/supabase"
 
-// Mock data - gerçek uygulamada API'den gelecek
-const mockEvents = [
-  {
-    id: 1,
-    title: "Hamlet",
-    category: "Klasik",
-    date: "2024-02-15",
-    venue: "Ana Sahne",
-    status: "Aktif",
-    ticketsSold: 120,
-  },
-  {
-    id: 2,
-    title: "Aşk-ı Memnu",
-    category: "Türk Klasikleri",
-    date: "2024-02-22",
-    venue: "Küçük Sahne",
-    status: "Aktif",
-    ticketsSold: 85,
-  },
-]
+type NewEventState = {
+  title: string
+  description: string
+  long_description: string
+  date: string
+  time: string
+  venue: string
+  category: string
+  price: string
+  ticket_url: string
+  image: string
+  status: string
+}
 
-export default function AdminPage() {
-  const [events, setEvents] = useState(mockEvents)
-  const [isAddingEvent, setIsAddingEvent] = useState(false)
-  const [editingEvent, setEditingEvent] = useState(null)
-
-  const [newEvent, setNewEvent] = useState({
+const defaultNewEvent: NewEventState = {
     title: "",
     description: "",
+  long_description: "",
     date: "",
     time: "",
     venue: "",
     category: "",
     price: "",
-    ticketUrl: "",
+  ticket_url: "",
     image: "",
-  })
+  status: "Taslak",
+}
 
-  const handleAddEvent = () => {
-    const event = {
-      id: Date.now(),
-      ...newEvent,
-      status: "Aktif",
-      ticketsSold: 0,
+export default function AdminPage() {
+  const router = useRouter()
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null)
+  const [events, setEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isAddingEvent, setIsAddingEvent] = useState(false)
+
+  const [newEvent, setNewEvent] = useState<NewEventState>(defaultNewEvent)
+  const [editEvent, setEditEvent] = useState<Event | null>(null)
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({})
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({})
+  const [createFile, setCreateFile] = useState<File | null>(null)
+  const [editFile, setEditFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+
+  // Auth kontrolü
+  useEffect(() => {
+    async function checkSession() {
+      const { data } = await supabase.auth.getSession()
+      if (!data.session) {
+        setIsAuthed(false)
+        router.replace("/admin/login")
+        return
+      }
+      setIsAuthed(true)
     }
-    setEvents([...events, event])
-    setNewEvent({
-      title: "",
-      description: "",
-      date: "",
-      time: "",
-      venue: "",
-      category: "",
-      price: "",
-      ticketUrl: "",
-      image: "",
+    checkSession()
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (!session) {
+        setIsAuthed(false)
+        router.replace("/admin/login")
+      } else {
+        setIsAuthed(true)
+      }
     })
-    setIsAddingEvent(false)
+    return () => {
+      sub.subscription.unsubscribe()
+    }
+  }, [router])
+
+  // Etkinlikleri getir
+  useEffect(() => {
+    if (!isAuthed) return
+    async function fetchEvents() {
+      try {
+        setLoading(true)
+        setError(null)
+        const { data, error } = await EventsService.getAllEvents()
+        if (error) throw error
+        setEvents(data || [])
+      } catch (err: any) {
+        setError(err?.message || "Veri alınamadı")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchEvents()
+  }, [isAuthed])
+
+  const categories = useMemo(
+    () => ["Klasik", "Türk Klasikleri", "Çocuk", "Müzikal", "Komedi"],
+    []
+  )
+  const venues = useMemo(() => ["Ana Sahne", "Küçük Sahne"], [])
+
+  function validate(payload: Record<string, unknown>): Record<string, string> {
+    const errors: Record<string, string> = {}
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value === undefined || value === null || String(value).trim().length === 0) {
+        errors[key] = "Bu alan zorunludur"
+      }
+    })
+    return errors
   }
 
-  const handleDeleteEvent = (id) => {
-    setEvents(events.filter((event) => event.id !== id))
+  async function handleCreate() {
+    try {
+      const payload = { ...newEvent }
+      const errs = validate(payload)
+      // Görsel için: URL boş olabilir, dosya seçilmişse kabul et
+      if (!payload.image && createFile) {
+        delete errs.image
+      }
+      setCreateErrors(errs)
+      if (Object.keys(errs).length > 0) return
+      // Dosya yükleme opsiyonel: URL boşsa ve dosya varsa yükle
+      if (!payload.image && createFile) {
+        setUploading(true)
+        const { publicUrl, error } = await uploadEventImage(createFile)
+        setUploading(false)
+        if (error) throw error
+        if (publicUrl) payload.image = publicUrl
+      }
+      const { data, error } = await EventsService.createEvent(payload)
+      if (error) throw error
+      if (data) setEvents((prev) => [data, ...prev])
+      setNewEvent(defaultNewEvent)
+    setIsAddingEvent(false)
+    } catch (err: any) {
+      alert(`Kaydetme hatası: ${err?.message || err}`)
+    }
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm("Bu etkinliği silmek istiyor musunuz?")) return
+    const { error } = await EventsService.deleteEvent(id)
+    if (error) {
+      alert(`Silme hatası: ${error.message || error}`)
+      return
+    }
+    setEvents((prev) => prev.filter((e) => e.id !== id))
+  }
+
+  async function handleUpdate() {
+    if (!editEvent) return
+    const { id, ...updates } = editEvent
+    const errs = validate({
+      title: updates.title,
+      description: (updates as any).description,
+      long_description: (updates as any).long_description ?? (updates as any).longDescription ?? "",
+      date: updates.date,
+      time: updates.time,
+      venue: updates.venue,
+      category: updates.category,
+      price: updates.price,
+      ticket_url: (updates as any).ticket_url ?? (updates as any).ticketUrl ?? "",
+      image: updates.image,
+      status: updates.status,
+    })
+    // Görsel için: URL boş olabilir, dosya seçilmişse kabul
+    if (!(updates as any).image && editFile) {
+      delete errs.image
+    }
+    setEditErrors(errs)
+    if (Object.keys(errs).length > 0) return
+    // Dosya yükleme opsiyonel: image boşsa ve dosya seçildiyse
+    if (!updates.image && editFile) {
+      setUploading(true)
+      const { publicUrl, error } = await uploadEventImage(editFile)
+      setUploading(false)
+      if (error) {
+        alert(`Yükleme hatası: ${error.message || error}`)
+        return
+      }
+      if (publicUrl) (updates as any).image = publicUrl
+    }
+    const { data, error } = await EventsService.updateEvent(id, updates)
+    if (error) {
+      alert(`Güncelleme hatası: ${error.message || error}`)
+      return
+    }
+    if (data) setEvents((prev) => prev.map((e) => (e.id === data.id ? data : e)))
+    setEditEvent(null)
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    router.replace("/admin/login")
   }
 
   return (
@@ -90,12 +220,15 @@ export default function AdminPage() {
               </Link>
               <span className="text-sm text-muted-foreground">Yönetim Paneli</span>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <Button asChild variant="outline" size="sm">
                 <Link href="/">
                   <Eye className="w-4 h-4 mr-2" />
                   Siteyi Görüntüle
                 </Link>
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleSignOut}>
+                <LogOut className="w-4 h-4 mr-1" /> Çıkış
               </Button>
             </div>
           </nav>
@@ -104,8 +237,11 @@ export default function AdminPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">Yönetim Paneli</h1>
-          <p className="text-muted-foreground">Etkinlikleri ve site içeriğini yönetin</p>
+          <h1 className="text-4xl font-bold mb-2">Yönetim Paneli</h1>
+          <p className="text-muted-foreground">Etkinlikleri yönetin</p>
+          {error && (
+            <div className="mt-3 p-3 rounded border border-red-200 text-red-700 bg-red-50">{error}</div>
+          )}
         </div>
 
         <Tabs defaultValue="events" className="space-y-6">
@@ -119,8 +255,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Etkinlik Yönetimi</h2>
               <Button onClick={() => setIsAddingEvent(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Yeni Etkinlik
+                <Plus className="w-4 h-4 mr-2" /> Yeni Etkinlik
               </Button>
             </div>
 
@@ -128,34 +263,24 @@ export default function AdminPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Yeni Etkinlik Ekle</CardTitle>
-                  <CardDescription>Yeni bir etkinlik oluşturun</CardDescription>
+                  <CardDescription>Supabase'e kaydedilir</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="title">Etkinlik Adı</Label>
-                      <Input
-                        id="title"
-                        value={newEvent.title}
-                        onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                        placeholder="Örn: Hamlet"
-                      />
+                      <Input id="title" value={newEvent.title} onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="category">Kategori</Label>
-                      <Select
-                        value={newEvent.category}
-                        onValueChange={(value) => setNewEvent({ ...newEvent, category: value })}
-                      >
+                      <Select value={newEvent.category} onValueChange={(value) => setNewEvent({ ...newEvent, category: value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Kategori seçin" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Klasik">Klasik</SelectItem>
-                          <SelectItem value="Türk Klasikleri">Türk Klasikleri</SelectItem>
-                          <SelectItem value="Çocuk">Çocuk</SelectItem>
-                          <SelectItem value="Müzikal">Müzikal</SelectItem>
-                          <SelectItem value="Komedi">Komedi</SelectItem>
+                          {categories.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -163,89 +288,75 @@ export default function AdminPage() {
 
                   <div>
                     <Label htmlFor="description">Açıklama</Label>
-                    <Textarea
-                      id="description"
-                      value={newEvent.description}
-                      onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                      placeholder="Etkinlik açıklaması..."
-                    />
+                    <Textarea id="description" value={newEvent.description} onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })} required />
+                    {createErrors.description && <p className="text-sm text-red-600 mt-1">{createErrors.description}</p>}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="long_description">Uzun Açıklama</Label>
+                    <Textarea id="long_description" value={newEvent.long_description} onChange={(e) => setNewEvent({ ...newEvent, long_description: e.target.value })} rows={6} required />
+                    {createErrors.long_description && <p className="text-sm text-red-600 mt-1">{createErrors.long_description}</p>}
                   </div>
 
                   <div className="grid md:grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="date">Tarih</Label>
-                      <Input
-                        id="date"
-                        type="date"
-                        value={newEvent.date}
-                        onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                      />
+                      <Input id="date" type="date" value={newEvent.date} onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })} required />
+                      {createErrors.date && <p className="text-sm text-red-600 mt-1">{createErrors.date}</p>}
                     </div>
                     <div>
                       <Label htmlFor="time">Saat</Label>
-                      <Input
-                        id="time"
-                        type="time"
-                        value={newEvent.time}
-                        onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
-                      />
+                      <Input id="time" type="time" value={newEvent.time} onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })} required />
+                      {createErrors.time && <p className="text-sm text-red-600 mt-1">{createErrors.time}</p>}
                     </div>
                     <div>
                       <Label htmlFor="venue">Sahne</Label>
-                      <Select
-                        value={newEvent.venue}
-                        onValueChange={(value) => setNewEvent({ ...newEvent, venue: value })}
-                      >
+                      <Select value={newEvent.venue} onValueChange={(value) => setNewEvent({ ...newEvent, venue: value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Sahne seçin" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Ana Sahne">Ana Sahne</SelectItem>
-                          <SelectItem value="Küçük Sahne">Küçük Sahne</SelectItem>
+                          {venues.map((v) => (
+                            <SelectItem key={v} value={v}>{v}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
+                      {createErrors.venue && <p className="text-sm text-red-600 mt-1">{createErrors.venue}</p>}
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid md:grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="price">Fiyat</Label>
-                      <Input
-                        id="price"
-                        value={newEvent.price}
-                        onChange={(e) => setNewEvent({ ...newEvent, price: e.target.value })}
-                        placeholder="Örn: 100-200 TL"
-                      />
+                      <Input id="price" value={newEvent.price} onChange={(e) => setNewEvent({ ...newEvent, price: e.target.value })} placeholder="Örn: 100-200 TL" required />
+                      {createErrors.price && <p className="text-sm text-red-600 mt-1">{createErrors.price}</p>}
                     </div>
                     <div>
-                      <Label htmlFor="ticketUrl">Bilet Satış Linki</Label>
-                      <Input
-                        id="ticketUrl"
-                        value={newEvent.ticketUrl}
-                        onChange={(e) => setNewEvent({ ...newEvent, ticketUrl: e.target.value })}
-                        placeholder="https://biletix.com/..."
-                      />
+                      <Label htmlFor="ticket">Bilet Linki</Label>
+                      <Input id="ticket" value={newEvent.ticket_url} onChange={(e) => setNewEvent({ ...newEvent, ticket_url: e.target.value })} placeholder="https://..." required />
+                      {createErrors.ticket_url && <p className="text-sm text-red-600 mt-1">{createErrors.ticket_url}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="status">Durum</Label>
+                      <Input id="status" value={newEvent.status} onChange={(e) => setNewEvent({ ...newEvent, status: e.target.value })} placeholder="Biletler Satışta / Yakında" required />
+                      {createErrors.status && <p className="text-sm text-red-600 mt-1">{createErrors.status}</p>}
                     </div>
                   </div>
 
                   <div>
                     <Label htmlFor="image">Görsel URL</Label>
-                    <Input
-                      id="image"
-                      value={newEvent.image}
-                      onChange={(e) => setNewEvent({ ...newEvent, image: e.target.value })}
-                      placeholder="Görsel URL'si"
-                    />
+                    <Input id="image" value={newEvent.image} onChange={(e) => setNewEvent({ ...newEvent, image: e.target.value })} placeholder="URL girebilir veya aşağıdan yükleyebilirsiniz" />
+                    <div className="mt-2">
+                      <input type="file" accept="image/*" onChange={(e) => setCreateFile(e.target.files?.[0] || null)} />
+                    </div>
+                    {createErrors.image && <p className="text-sm text-red-600 mt-1">{createErrors.image}</p>}
                   </div>
 
                   <div className="flex gap-2">
-                    <Button onClick={handleAddEvent}>
-                      <Save className="w-4 h-4 mr-2" />
-                      Kaydet
+                    <Button onClick={handleCreate}>
+                      <Save className="w-4 h-4 mr-2" /> Kaydet
                     </Button>
-                    <Button variant="outline" onClick={() => setIsAddingEvent(false)}>
-                      İptal
-                    </Button>
+                    <Button variant="outline" onClick={() => setIsAddingEvent(false)}>İptal</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -254,9 +365,12 @@ export default function AdminPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Mevcut Etkinlikler</CardTitle>
-                <CardDescription>Tüm etkinlikleri görüntüleyin ve yönetin</CardDescription>
+                <CardDescription>Supabase `events` tablosu</CardDescription>
               </CardHeader>
               <CardContent>
+                {loading ? (
+                  <div className="py-10 text-center text-muted-foreground">Yükleniyor...</div>
+                ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -265,7 +379,6 @@ export default function AdminPage() {
                       <TableHead>Tarih</TableHead>
                       <TableHead>Sahne</TableHead>
                       <TableHead>Durum</TableHead>
-                      <TableHead>Satılan Bilet</TableHead>
                       <TableHead>İşlemler</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -273,21 +386,97 @@ export default function AdminPage() {
                     {events.map((event) => (
                       <TableRow key={event.id}>
                         <TableCell className="font-medium">{event.title}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{event.category}</Badge>
-                        </TableCell>
-                        <TableCell>{new Date(event.date).toLocaleDateString("tr-TR")}</TableCell>
+                          <TableCell><Badge variant="secondary">{event.category}</Badge></TableCell>
+                          <TableCell>{event.date ? new Date(event.date).toLocaleDateString("tr-TR") : "-"}</TableCell>
                         <TableCell>{event.venue}</TableCell>
                         <TableCell>
-                          <Badge variant={event.status === "Aktif" ? "default" : "secondary"}>{event.status}</Badge>
+                            <Badge variant={event.status === "Biletler Satışta" ? "default" : "secondary"}>{event.status}</Badge>
                         </TableCell>
-                        <TableCell>{event.ticketsSold}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button size="sm" variant="outline" onClick={() => setEditEvent(event)}>
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleDeleteEvent(event.id)}>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Etkinliği Düzenle</DialogTitle>
+                                  </DialogHeader>
+                                  {editEvent && (
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label>Başlık</Label>
+                                        <Input value={editEvent.title} onChange={(e) => setEditEvent({ ...editEvent, title: e.target.value })} required />
+                                        {editErrors.title && <p className="text-sm text-red-600 mt-1">{editErrors.title}</p>}
+                                      </div>
+                                      <div>
+                                        <Label>Açıklama</Label>
+                                        <Textarea value={(editEvent as any).description || ""} onChange={(e) => setEditEvent({ ...editEvent, description: e.target.value })} required />
+                                        {editErrors.description && <p className="text-sm text-red-600 mt-1">{editErrors.description}</p>}
+                                      </div>
+                                      <div>
+                                        <Label>Uzun Açıklama</Label>
+                                        <Textarea rows={6} value={(editEvent as any).long_description || (editEvent as any).longDescription || ""} onChange={(e) => setEditEvent({ ...editEvent, long_description: e.target.value } as any)} required />
+                                        {editErrors.long_description && <p className="text-sm text-red-600 mt-1">{editErrors.long_description}</p>}
+                                      </div>
+                                      <div className="grid grid-cols-3 gap-3">
+                                        <div>
+                                          <Label>Tarih</Label>
+                                          <Input type="date" value={editEvent.date || ""} onChange={(e) => setEditEvent({ ...editEvent, date: e.target.value })} required />
+                                          {editErrors.date && <p className="text-sm text-red-600 mt-1">{editErrors.date}</p>}
+                                        </div>
+                                        <div>
+                                          <Label>Saat</Label>
+                                          <Input type="time" value={editEvent.time || ""} onChange={(e) => setEditEvent({ ...editEvent, time: e.target.value })} required />
+                                          {editErrors.time && <p className="text-sm text-red-600 mt-1">{editErrors.time}</p>}
+                                        </div>
+                                        <div>
+                                          <Label>Sahne</Label>
+                                          <Input value={editEvent.venue || ""} onChange={(e) => setEditEvent({ ...editEvent, venue: e.target.value })} required />
+                                          {editErrors.venue && <p className="text-sm text-red-600 mt-1">{editErrors.venue}</p>}
+                                        </div>
+                                      </div>
+                                      <div className="grid grid-cols-3 gap-3">
+                                        <div>
+                                          <Label>Kategori</Label>
+                                          <Input value={editEvent.category || ""} onChange={(e) => setEditEvent({ ...editEvent, category: e.target.value })} required />
+                                          {editErrors.category && <p className="text-sm text-red-600 mt-1">{editErrors.category}</p>}
+                                        </div>
+                                        <div>
+                                          <Label>Fiyat</Label>
+                                          <Input value={editEvent.price || ""} onChange={(e) => setEditEvent({ ...editEvent, price: e.target.value })} required />
+                                          {editErrors.price && <p className="text-sm text-red-600 mt-1">{editErrors.price}</p>}
+                                        </div>
+                                        <div>
+                                          <Label>Durum</Label>
+                                          <Input value={editEvent.status || ""} onChange={(e) => setEditEvent({ ...editEvent, status: e.target.value })} required />
+                                          {editErrors.status && <p className="text-sm text-red-600 mt-1">{editErrors.status}</p>}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <Label>Bilet Linki</Label>
+                                        <Input value={(editEvent as any).ticket_url || (editEvent as any).ticketUrl || ""} onChange={(e) => setEditEvent({ ...editEvent, ticket_url: e.target.value } as any)} required />
+                                        {editErrors.ticket_url && <p className="text-sm text-red-600 mt-1">{editErrors.ticket_url}</p>}
+                                      </div>
+                                      <div>
+                                        <Label>Görsel</Label>
+                                        <Input value={editEvent.image || ""} onChange={(e) => setEditEvent({ ...editEvent, image: e.target.value })} placeholder="URL girebilir veya aşağıdan yükleyebilirsiniz" />
+                                        <div className="mt-2">
+                                          <input type="file" accept="image/*" onChange={(e) => setEditFile(e.target.files?.[0] || null)} />
+                                        </div>
+                                        {editErrors.image && <p className="text-sm text-red-600 mt-1">{editErrors.image}</p>}
+                                      </div>
+                                      <div className="flex gap-2 pt-2">
+                                        <Button onClick={handleUpdate} disabled={uploading}><Save className="w-4 h-4 mr-2" /> {uploading ? 'Yükleniyor...' : 'Güncelle'}</Button>
+                                        <Button variant="outline" onClick={() => setEditEvent(null)}>Kapat</Button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </DialogContent>
+                              </Dialog>
+                              <Button size="sm" variant="destructive" onClick={() => handleDelete(event.id)}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
@@ -296,6 +485,7 @@ export default function AdminPage() {
                     ))}
                   </TableBody>
                 </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

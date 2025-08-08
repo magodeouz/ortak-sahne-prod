@@ -1,0 +1,30 @@
+import { supabase } from "./supabase"
+
+export const STORAGE_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "ortaksahne"
+
+export async function uploadEventImage(file: File): Promise<{ publicUrl: string | null; error: any; path?: string }> {
+  try {
+    const fileExt = file.name.split(".").pop() || "jpg"
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+    const filePath = `events/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
+      })
+
+    if (uploadError) {
+      return { publicUrl: null, error: uploadError }
+    }
+
+    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filePath)
+    return { publicUrl: data.publicUrl, error: null, path: filePath }
+  } catch (err) {
+    return { publicUrl: null, error: err }
+  }
+}
+
+

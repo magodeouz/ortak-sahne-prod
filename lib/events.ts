@@ -1,20 +1,34 @@
 import { supabase } from './supabase'
 
-// Event type tanımı
+// Event type tanımı (Supabase tablo şemasına uyumlu)
 export interface Event {
   id: number
   title: string
   description: string
+  long_description?: string
+  // UI tarafında kullanılan camelCase alanlar, tip uyumu için opsiyonel
+  longDescription?: string
   date: string
   time: string
   venue: string
   category: string
   image?: string
   ticket_url?: string
+  ticketUrl?: string
   price: string
   status: string
+  tickets_sold?: number
+  duration?: string
+  director?: string
+  castt?: string[]
+  cast?: string[]
+  rating?: number
+  review_count?: number
+  reviewCount?: number
+  age_limit?: string
+  ageLimit?: string
+  language?: string
   created_at?: string
-  updated_at?: string
 }
 
 // Events servis fonksiyonları
@@ -93,6 +107,51 @@ export class EventsService {
       return { data, error }
     } catch (err) {
       return { data: null, error: err }
+    }
+  }
+
+  // Yeni etkinlik oluştur
+  static async createEvent(payload: Partial<Event>): Promise<{ data: Event | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .insert(payload)
+        .select('*')
+        .single()
+
+      return { data, error }
+    } catch (err) {
+      return { data: null, error: err }
+    }
+  }
+
+  // Etkinlik güncelle
+  static async updateEvent(id: number, updates: Partial<Event>): Promise<{ data: Event | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .update(updates)
+        .eq('id', id)
+        .select('*')
+        .single()
+
+      return { data, error }
+    } catch (err) {
+      return { data: null, error: err }
+    }
+  }
+
+  // Etkinlik sil
+  static async deleteEvent(id: number): Promise<{ error: any }> {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', id)
+
+      return { error }
+    } catch (err) {
+      return { error: err }
     }
   }
 }

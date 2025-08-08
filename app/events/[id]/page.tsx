@@ -122,15 +122,15 @@ export default function EventDetailPage() {
                 <h1 className="text-4xl font-bold">{event.title}</h1>
                 <div className="flex items-center gap-2">
                   <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                  <span className="font-semibold">{event.rating}</span>
-                  <span className="text-muted-foreground">({event.reviewCount} değerlendirme)</span>
+                  <span className="font-semibold">{(event as any).rating ?? '-'}</span>
+                  <span className="text-muted-foreground">{(((event as any).reviewCount ?? (event as any).review_count) ?? 0) + ' değerlendirme'}</span>
                 </div>
               </div>
               <p className="text-lg text-muted-foreground mb-6">{event.description}</p>
 
               <div className="prose max-w-none">
                 <h3 className="text-xl font-semibold mb-3">Oyun Hakkında</h3>
-                <div className="text-muted-foreground whitespace-pre-line">{event.longDescription}</div>
+                <div className="text-muted-foreground whitespace-pre-line">{(event as any).longDescription || (event as any).long_description || ''}</div>
               </div>
             </div>
 
@@ -140,12 +140,12 @@ export default function EventDetailPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Yönetmen:</span>
-                    <span>{event.director}</span>
+                    <span>{(event as any).director || '-'}</span>
                   </div>
                   <div className="flex items-start justify-between">
                     <span className="font-medium">Oyuncular:</span>
                     <div className="text-right">
-                      {event.cast.map((actor, index) => (
+                      {(((event as any).cast as string[]) || ((event as any).castt as string[]) || []).map((actor, index) => (
                         <div key={index}>{actor}</div>
                       ))}
                     </div>
@@ -169,7 +169,7 @@ export default function EventDetailPage() {
 
                   {event.status === "Biletler Satışta" && (
                     <Button asChild className="w-full" size="lg">
-                      <a href={event.ticketUrl} target="_blank" rel="noopener noreferrer">
+                      <a href={(event as any).ticketUrl || (event as any).ticket_url || '#'} target="_blank" rel="noopener noreferrer">
                         Bilet Al <ExternalLink className="w-4 h-4 ml-2" />
                       </a>
                     </Button>
@@ -199,7 +199,7 @@ export default function EventDetailPage() {
                     <Clock className="w-4 h-4 mr-3 text-muted-foreground" />
                     <div>
                       <div className="font-medium">{event.time}</div>
-                      <div className="text-muted-foreground">{event.duration}</div>
+                      <div className="text-muted-foreground">{(event as any).duration || ''}</div>
                     </div>
                   </div>
                   <div className="flex items-center text-sm">
@@ -212,8 +212,8 @@ export default function EventDetailPage() {
                   <div className="flex items-center text-sm">
                     <Users className="w-4 h-4 mr-3 text-muted-foreground" />
                     <div>
-                      <div className="font-medium">Yaş Sınırı: {event.ageLimit}</div>
-                      <div className="text-muted-foreground">Dil: {event.language}</div>
+                      <div className="font-medium">Yaş Sınırı: {(event as any).ageLimit || (event as any).age_limit || '-'}</div>
+                      <div className="text-muted-foreground">Dil: {event.language || '-'}</div>
                     </div>
                   </div>
                 </div>
