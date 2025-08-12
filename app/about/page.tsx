@@ -36,6 +36,13 @@ export default function AboutPage() {
       <div className="container mx-auto px-4 py-8">
         {/* Hero Section */}
         <div className="text-center mb-12">
+          <div className="flex items-center justify-center mb-6">
+            <img
+              src="/ortak-sahne-logo.jpg"
+              alt="Ortak Sahne Logo"
+              className="h-20 w-auto"
+            />
+          </div>
           <h1 className="text-4xl font-bold mb-4">Hakkımızda</h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             2010 yılından beri sanat severlere hizmet veren Ortak Sahne, kaliteli tiyatro oyunları ve kültürel
@@ -95,10 +102,10 @@ export default function AboutPage() {
               </p>
             </div>
           </div>
-          <div className="aspect-video">
+          <div className="aspect-[5/7]">
             <img
-              src="/placeholder.svg?height=400&width=600"
-              alt="Ortak Sahne Sahnesi"
+              src="/placeholder.svg"
+              alt="Tiyatro Sahnesi"
               className="w-full h-full object-cover rounded-lg"
             />
           </div>
@@ -123,7 +130,7 @@ export default function AboutPage() {
               </p>
             </div>
           </div>
-          <div className="lg:order-1 aspect-video">
+          <div className="lg:order-1 aspect-[5/7]">
             <img
               src="/placeholder.svg?height=400&width=600"
               alt="Tiyatro İzleyicileri"

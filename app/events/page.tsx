@@ -17,32 +17,30 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Supabase'den events verilerini çek
+  // Etkinlikleri getir
   useEffect(() => {
     async function fetchEvents() {
       try {
         setLoading(true)
         setError(null)
-        
         const { data, error } = await EventsService.getAllEvents()
+        if (error) throw error
         
-        if (error) {
-          console.error('Supabase error:', error)
-          setError(`Veri çekme hatası: ${error.message}. RLS politikası eksik olabilir.`)
-          setEvents([]) // Hata durumunda boş array
-        } else {
-          console.log('Events data from Supabase:', data)
-          setEvents(data || [])
-        }
-      } catch (err) {
-        console.error('Fetch error:', err)
-        setError('Bağlantı hatası')
-        setEvents([]) // Hata durumunda boş array
+        // Bugünden sonraki etkinlikleri filtrele ve tarihe göre sırala
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        const upcoming = (data || [])
+          .filter(event => new Date(event.date) >= today)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        
+        setEvents(upcoming)
+      } catch (err: any) {
+        setError(err?.message || "Veri alınamadı")
       } finally {
         setLoading(false)
       }
     }
-
     fetchEvents()
   }, [])
 
@@ -93,8 +91,15 @@ export default function EventsPage() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">Tüm Etkinlikler</h1>
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center mb-6">
+            <img
+              src="/ortak-sahne-logo.jpg"
+              alt="Ortak Sahne Logo"
+              className="h-20 w-auto"
+            />
+          </div>
+          <h1 className="text-4xl font-bold mb-4">Etkinlikler</h1>
           <p className="text-muted-foreground">Ortak Sahne'de sahnelenecek tüm oyunlar ve etkinlikler</p>
           {error && (
             <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -154,55 +159,61 @@ export default function EventsPage() {
 
         {/* Events Grid */}
         {!loading && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredEvents.map((event) => (
-            <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="aspect-video relative">
-                <img src={event.image || "/placeholder.svg"} alt={event.title} className="w-full h-full object-cover" />
-                <div className="absolute top-2 right-2">
+            <Card key={event.id} className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:bg-white hover:scale-105">
+              <div className="aspect-[5/7] relative overflow-hidden">
+                <img src={event.image || "/placeholder.svg"} alt={event.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                <div className="absolute top-3 right-3">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    className={`px-3 py-1 rounded-full text-xs font-medium shadow-lg ${
                       event.status === "Biletler Satışta"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
+                        ? "bg-green-500 text-white"
+                        : "bg-yellow-500 text-white"
                     }`}
                   >
                     {event.status}
                   </span>
                 </div>
-              </div>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">{event.title}</CardTitle>
-                  <span className="text-xs bg-muted px-2 py-1 rounded">{event.category}</span>
+                <div className="absolute bottom-3 left-3">
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-black/70 text-white backdrop-blur-sm">
+                    {event.category}
+                  </span>
                 </div>
-                <CardDescription>{event.description}</CardDescription>
+              </div>
+              <CardHeader className="p-5">
+                <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors duration-300">{event.title}</CardTitle>
+                <p className="text-sm text-muted-foreground line-clamp-1">
+                  {event.description}
+                </p>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-2" />
+              <CardContent className="p-5 pt-0">
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Calendar className="w-3 h-3 mr-2 text-primary" />
                     {new Date(event.date).toLocaleDateString("tr-TR")}
                   </div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4 mr-2" />
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Clock className="w-3 h-3 mr-2 text-primary" />
                     {event.time}
                   </div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4 mr-2" />
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <MapPin className="w-3 h-3 mr-2 text-primary" />
                     {event.venue}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-primary">{event.price}</span>
+                  <span className="font-bold text-primary text-sm bg-primary/10 px-3 py-1 rounded-full">{event.price}</span>
                   <div className="flex gap-2">
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`/events/${event.id}`}>Detaylar</Link>
+                    <Button asChild size="sm" variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300">
+                      <Link href={`/events/${event.id}`}>
+                        Detaylar
+                      </Link>
                     </Button>
                     {event.status === "Biletler Satışta" && (
-                      <Button asChild size="sm">
+                      <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
                         <a href={event.ticket_url || "#"} target="_blank" rel="noopener noreferrer">
-                          Bilet Al <ExternalLink className="w-4 h-4 ml-1" />
+                          Bilet Al <ExternalLink className="w-3 h-3 ml-1" />
                         </a>
                       </Button>
                     )}

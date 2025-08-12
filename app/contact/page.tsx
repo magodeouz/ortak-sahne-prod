@@ -39,6 +39,13 @@ export default function ContactPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-12">
+          <div className="flex items-center justify-center mb-6">
+            <img
+              src="/ortak-sahne-logo.jpg"
+              alt="Ortak Sahne Logo"
+              className="h-20 w-auto"
+            />
+          </div>
           <h1 className="text-4xl font-bold mb-4">İletişim</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Sorularınız, önerileriniz veya işbirliği teklifleriniz için bizimle iletişime geçin.
@@ -140,8 +147,11 @@ export default function ContactPage() {
                 <CardTitle>Konum</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4">
-                  <span className="text-muted-foreground">Harita Görünümü</span>
+                <div className="aspect-[5/7] bg-muted rounded-lg flex items-center justify-center mb-4">
+                  <div className="text-center text-muted-foreground">
+                    <MapPin className="w-12 h-12 mx-auto mb-2" />
+                    <p>Harita yüklenemedi</p>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Taksim Meydanı'na 5 dakika yürüme mesafesinde, metro ve otobüs hatlarına yakın konumumuzla kolayca

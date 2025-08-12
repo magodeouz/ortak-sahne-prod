@@ -12,31 +12,31 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Ana sayfa için yaklaşan etkinlikleri çek
+  // Yaklaşan etkinlikleri getir
   useEffect(() => {
     async function fetchUpcomingEvents() {
       try {
         setLoading(true)
         setError(null)
+        const { data, error } = await EventsService.getAllEvents()
+        if (error) throw error
         
-        const { data, error } = await EventsService.getUpcomingEvents(3)
+        // Bugünden sonraki etkinlikleri filtrele ve tarihe göre sırala
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
         
-        if (error) {
-          console.error('Supabase error:', error)
-          setError('Etkinlikler yüklenemedi')
-          setUpcomingEvents([])
-        } else {
-          setUpcomingEvents(data || [])
-        }
-      } catch (err) {
-        console.error('Fetch error:', err)
-        setError('Bağlantı hatası')
-        setUpcomingEvents([])
+        const upcoming = (data || [])
+          .filter(event => new Date(event.date) >= today)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          .slice(0, 4)
+        
+        setUpcomingEvents(upcoming)
+      } catch (err: any) {
+        setError(err?.message || "Veri alınamadı")
       } finally {
         setLoading(false)
       }
     }
-
     fetchUpcomingEvents()
   }, [])
 
@@ -72,8 +72,15 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white py-20">
+      <section className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-20">
         <div className="container mx-auto px-4 text-center">
+          <div className="flex items-center justify-center mb-8">
+            <img
+              src="/ortak-sahne-logo.jpg"
+              alt="Ortak Sahne Logo"
+              className="h-24 w-auto"
+            />
+          </div>
           <h2 className="text-5xl font-bold mb-6">Ortak Sahne'ye Hoş Geldiniz</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
             Sanatın ve kültürün buluştuğu nokta. En kaliteli tiyatro oyunları ve etkinliklerle sizleri bekliyoruz.
@@ -94,79 +101,99 @@ export default function HomePage() {
       </section>
 
       {/* Upcoming Events */}
-      <section className="py-16">
+      <section className="py-16 bg-gradient-to-br from-gray-50 to-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold mb-4">Yaklaşan Etkinlikler</h3>
+            <h2 className="text-3xl font-bold mb-4">Yaklaşan Etkinlikler</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Bu ay sahnelenecek olan muhteşem oyunlarımızı kaçırmayın
+              Önümüzdeki günlerde sahnelenecek en önemli oyunlar ve etkinlikler
             </p>
-            {error && (
-              <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded max-w-md mx-auto">
-                <p className="text-sm">{error}</p>
-              </div>
-            )}
           </div>
-
+          
           {loading ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Etkinlikler yükleniyor...</p>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="bg-gray-200 aspect-[5/7] rounded-lg mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                </div>
+              ))}
+            </div>
+          ) : upcomingEvents.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🎭</div>
+              <h3 className="text-xl font-semibold mb-2">Henüz Etkinlik Yok</h3>
+              <p className="text-muted-foreground">Yakında harika etkinlikler eklenecek!</p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {upcomingEvents.map((event) => (
-                <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="aspect-video relative">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {upcomingEvents.slice(0, 4).map((event) => (
+                <Card key={event.id} className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:bg-white hover:scale-105">
+                  <div className="aspect-[5/7] relative overflow-hidden">
                     <img
                       src={event.image || "/placeholder.svg"}
                       alt={event.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                      <div className="text-xs font-medium bg-primary/90 px-2 py-1 rounded-full inline-block">
+                        {event.category}
+                      </div>
+                    </div>
                   </div>
-                  <CardHeader>
-                    <CardTitle className="text-xl">{event.title}</CardTitle>
-                    <CardDescription>{event.description}</CardDescription>
+                  <CardHeader className="p-5">
+                    <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors duration-300">{event.title}</CardTitle>
+                    <p className="text-sm text-muted-foreground line-clamp-1">
+                      {event.description}
+                    </p>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="w-4 h-4 mr-2" />
+                  <CardContent className="p-5 pt-0">
+                    <div className="space-y-3 mb-4">
+                      <div className="flex items-center text-xs text-muted-foreground">
+                        <Calendar className="w-3 h-3 mr-2 text-primary" />
                         {new Date(event.date).toLocaleDateString("tr-TR")}
                       </div>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Clock className="w-4 h-4 mr-2" />
+                      <div className="flex items-center text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3 mr-2 text-primary" />
                         {event.time}
                       </div>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="w-4 h-4 mr-2" />
+                      <div className="flex items-center text-xs text-muted-foreground">
+                        <MapPin className="w-3 h-3 mr-2 text-primary" />
                         {event.venue}
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-primary">{event.price}</span>
-                      <Button asChild size="sm">
-                        <a href={event.ticket_url || "#"} target="_blank" rel="noopener noreferrer">
-                          Bilet Al <ExternalLink className="w-4 h-4 ml-1" />
-                        </a>
-                      </Button>
+                      <span className="font-bold text-primary text-sm bg-primary/10 px-3 py-1 rounded-full">{event.price}</span>
+                      <div className="flex gap-2">
+                        <Button asChild size="sm" variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300">
+                          <Link href={`/events/${event.id}`}>
+                            Detaylar
+                          </Link>
+                        </Button>
+                        <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                          <a href={event.ticket_url || "#"} target="_blank" rel="noopener noreferrer">
+                            Bilet Al <ExternalLink className="w-3 h-3 ml-1" />
+                          </a>
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
-
-              {upcomingEvents.length === 0 && !loading && (
-                <div className="text-center py-8 col-span-full">
-                  <p className="text-muted-foreground">Henüz etkinlik bulunmuyor.</p>
-                </div>
-              )}
             </div>
           )}
-
-          <div className="text-center mt-8">
-            <Button asChild variant="outline" size="lg">
-              <Link href="/events">Tüm Etkinlikleri Görüntüle</Link>
-            </Button>
-          </div>
+          
+          {upcomingEvents.length > 4 && (
+            <div className="text-center mt-8">
+              <Button asChild variant="outline" size="lg" className="border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300">
+                <Link href="/events">
+                  Tüm Etkinlikleri Gör
+                </Link>
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -190,7 +217,7 @@ export default function HomePage() {
             </div>
             <div className="aspect-video">
               <img
-                src="/placeholder.svg?height=400&width=600"
+                src="/public/ortaksahneimg.jpg"
                 alt="Ortak Sahne İç Görünüm"
                 className="w-full h-full object-cover rounded-lg"
               />

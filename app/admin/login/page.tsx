@@ -55,6 +55,13 @@ export default function AdminLoginPage() {
       <div className="container mx-auto px-4 py-12 flex justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
+            <div className="flex items-center justify-center mb-4">
+              <img
+                src="/ortak-sahne-logo.jpg"
+                alt="Ortak Sahne Logo"
+                className="h-16 w-auto"
+              />
+            </div>
             <CardTitle>Giriş Yap</CardTitle>
             <CardDescription>Supabase e-posta girişi</CardDescription>
           </CardHeader>

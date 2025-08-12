@@ -133,20 +133,30 @@ export default function AdminPage() {
       }
       setCreateErrors(errs)
       if (Object.keys(errs).length > 0) return
+      
+      console.log("Debug - createFile:", createFile)
+      console.log("Debug - payload.image before:", payload.image)
+      
       // Dosya yükleme opsiyonel: URL boşsa ve dosya varsa yükle
       if (!payload.image && createFile) {
         setUploading(true)
+        console.log("Debug - Starting file upload...")
         const { publicUrl, error } = await uploadEventImage(createFile)
+        console.log("Debug - Upload result:", { publicUrl, error })
         setUploading(false)
         if (error) throw error
         if (publicUrl) payload.image = publicUrl
       }
+      
+      console.log("Debug - Final payload:", payload)
       const { data, error } = await EventsService.createEvent(payload)
+      console.log("Debug - Create event result:", { data, error })
       if (error) throw error
       if (data) setEvents((prev) => [data, ...prev])
       setNewEvent(defaultNewEvent)
     setIsAddingEvent(false)
     } catch (err: any) {
+      console.error("Debug - Error in handleCreate:", err)
       alert(`Kaydetme hatası: ${err?.message || err}`)
     }
   }
@@ -177,16 +187,23 @@ export default function AdminPage() {
       image: updates.image,
       status: updates.status,
     })
+    
+    console.log("Debug - handleUpdate - editFile:", editFile)
+    console.log("Debug - handleUpdate - updates.image before:", updates.image)
+    
     // Görsel için: URL boş olabilir, dosya seçilmişse kabul
     if (!(updates as any).image && editFile) {
       delete errs.image
     }
     setEditErrors(errs)
     if (Object.keys(errs).length > 0) return
-    // Dosya yükleme opsiyonel: image boşsa ve dosya seçildiyse
-    if (!updates.image && editFile) {
+    
+    // Dosya yükleme opsiyonel: editFile varsa her zaman yükle
+    if (editFile) {
       setUploading(true)
+      console.log("Debug - handleUpdate - Starting file upload...")
       const { publicUrl, error } = await uploadEventImage(editFile)
+      console.log("Debug - handleUpdate - Upload result:", { publicUrl, error })
       setUploading(false)
       if (error) {
         alert(`Yükleme hatası: ${error.message || error}`)
@@ -194,7 +211,10 @@ export default function AdminPage() {
       }
       if (publicUrl) (updates as any).image = publicUrl
     }
+    
+    console.log("Debug - handleUpdate - Final updates:", updates)
     const { data, error } = await EventsService.updateEvent(id, updates)
+    console.log("Debug - handleUpdate - Update result:", { data, error })
     if (error) {
       alert(`Güncelleme hatası: ${error.message || error}`)
       return
@@ -237,6 +257,13 @@ export default function AdminPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
+          <div className="flex items-center justify-center mb-6">
+            <img
+              src="/ortak-sahne-logo.jpg"
+              alt="Ortak Sahne Logo"
+              className="h-16 w-auto"
+            />
+          </div>
           <h1 className="text-4xl font-bold mb-2">Yönetim Paneli</h1>
           <p className="text-muted-foreground">Etkinlikleri yönetin</p>
           {error && (
