@@ -104,7 +104,11 @@ export default function EventsPage() {
           {error && (
             <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
               <p><strong>Hata:</strong> {error}</p>
-              <p className="text-sm mt-1">Supabase'de RLS politikası eklenmesi gerekiyor.</p>
+              <p className="text-sm mt-1">
+                Lütfen .env.local içindeki <code>NEXT_PUBLIC_SUPABASE_URL</code> ve <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
+                değerlerini doğrulayın. Tablo adı <code>events</code> ve şema <code>public</code> olmalı. 401/403 alıyorsanız RLS
+                veya anahtar hatalıdır; 404/"relation does not exist" alıyorsanız tablo adı/şema uyuşmuyor olabilir.
+              </p>
             </div>
           )}
         </div>
