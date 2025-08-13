@@ -5,9 +5,23 @@ import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'Ortak Sahne',
+  description: 'Ortak Sahne – Tiyatroların Ortak Sahnesi. Etkinlikler, oyunlar ve turneler.',
+  generator: 'Ortak Sahne',
+  keywords: ['Ortak Sahne', 'tiyatro', 'etkinlik', 'oyun', 'İstanbul tiyatro'],
+  openGraph: {
+    title: 'Ortak Sahne',
+    description: 'Tiyatroların Ortak Sahnesi. Etkinlikler, oyunlar ve turneler.',
+    url: 'https://ortaksahne.com',
+    siteName: 'Ortak Sahne',
+    images: [{ url: '/ortak-sahne-logo.jpg' }],
+    type: 'website',
+  },
+  icons: {
+    icon: '/ortak-sahne-logo.jpg',
+    shortcut: '/ortak-sahne-logo.jpg',
+    apple: '/ortak-sahne-logo.jpg',
+  },
 }
 
 export default function RootLayout({

@@ -6,9 +6,10 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Clock, ExternalLink, ArrowLeft, Users, Star } from "lucide-react"
+import { Calendar, MapPin, Clock, ExternalLink, ArrowLeft, Users } from "lucide-react"
 import { EventsService, Event } from "@/lib/events"
 import Image from "next/image"
+import Script from "next/script"
 
 export default function EventDetailPage() {
   const params = useParams()
@@ -66,8 +67,25 @@ export default function EventDetailPage() {
       </div>
     )
   }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0)
+  const eventDate = new Date(event.date)
+  eventDate.setHours(0, 0, 0, 0)
+  const isPast = eventDate.getTime() < today.getTime()
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <Script id="breadcrumb-jsonld" type="application/ld+json">
+        {JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Ana Sayfa', item: 'https://ortaksahne.com/' },
+            { '@type': 'ListItem', position: 2, name: 'Etkinlikler', item: 'https://ortaksahne.com/events' },
+            { '@type': 'ListItem', position: 3, name: event.title, item: `https://ortaksahne.com/events/${event.id}` },
+          ],
+        })}
+      </Script>
       {/* Header */}
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -108,40 +126,31 @@ export default function EventDetailPage() {
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-3 space-y-8">
-            {/* Hero Section */}
-            <div className="relative">
-              <div className="max-w-3xl aspect-[5/7] relative rounded-2xl overflow-hidden shadow-2xl group">
-                <img
-                  src={event.image || "/placeholder.svg"}
-                  alt={event.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                <div className="absolute top-4 left-4">
-                  <Badge className="bg-primary/90 text-white border-0 shadow-lg backdrop-blur-sm">
-                    {event.category}
-                  </Badge>
-                </div>
-                <div className="absolute bottom-4 left-4 right-4">
-                  <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
-                    {event.title}
-                  </h1>
-                  <div className="flex items-center gap-3 text-white/90">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                      <span className="font-semibold">{(event as any).rating ?? '-'}</span>
-                    </div>
-                    <span className="text-sm">•</span>
-                    <span className="text-sm">{(((event as any).reviewCount ?? (event as any).review_count) ?? 0) + ' değerlendirme'}</span>
+            {/* Image + Description side-by-side */}
+            <div className="grid md:grid-cols-2 gap-8 items-start">
+              <div className="relative">
+                <div className="w-full max-w-md aspect-[4/5] relative rounded-2xl overflow-hidden shadow-2xl group">
+                  <img
+                    src={event.image || "/placeholder.svg"}
+                    alt={event.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                  <div className="absolute top-4 left-4">
+                    <Badge className="bg-primary/90 text-white border-0 shadow-lg backdrop-blur-sm">
+                      {event.category}
+                    </Badge>
+                  </div>
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <h1 className="text-2xl md:text-3xl font-bold text-white mb-2 drop-shadow-lg">
+                      {event.title}
+                    </h1>
+                    {/* Puan ve değerlendirmeler kaldırıldı */}
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Content Sections */}
-            <div className="space-y-8">
-              {/* Description */}
-              <div className="bg-card rounded-2xl p-8 shadow-lg border border-border/50">
+              <div className="bg-card rounded-2xl p-6 md:p-8 shadow-lg border border-border/50">
                 <h3 className="text-2xl font-bold mb-4 text-foreground flex items-center gap-2">
                   <div className="w-2 h-8 bg-primary rounded-full"></div>
                   Oyun Hakkında
@@ -153,8 +162,9 @@ export default function EventDetailPage() {
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Cast & Crew */}
+            {/* Cast & Crew */}
               <div className="bg-card rounded-2xl p-8 shadow-lg border border-border/50">
                 <h3 className="text-2xl font-bold mb-6 text-foreground flex items-center gap-2">
                   <div className="w-2 h-8 bg-primary rounded-full"></div>
@@ -186,12 +196,11 @@ export default function EventDetailPage() {
                 </div>
               </div>
             </div>
-          </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Ticket Card */}
-            <Card className="shadow-xl border-0 bg-gradient-to-br from-primary/5 to-primary/10">
+            <Card className={`shadow-xl border-0 bg-gradient-to-br from-primary/5 to-primary/10 ${isPast ? 'opacity-60' : ''}`}>
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -205,11 +214,17 @@ export default function EventDetailPage() {
                   </div>
 
                   {event.status === "Biletler Satışta" && (
-                    <Button asChild className="w-full h-12 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 bg-primary hover:bg-primary/90">
-                      <a href={(event as any).ticketUrl || (event as any).ticket_url || '#'} target="_blank" rel="noopener noreferrer">
-                        Bilet Al <ExternalLink className="w-5 h-5 ml-2" />
-                      </a>
-                    </Button>
+                    isPast ? (
+                      <Button disabled className="w-full h-12 text-lg font-semibold bg-muted text-muted-foreground cursor-not-allowed">
+                        Bilet Satışı Kapalı
+                      </Button>
+                    ) : (
+                      <Button asChild className="w-full h-12 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 bg-primary hover:bg-primary/90">
+                        <a href={(event as any).ticketUrl || (event as any).ticket_url || '#'} target="_blank" rel="noopener noreferrer">
+                          Bilet Al <ExternalLink className="w-5 h-5 ml-2" />
+                        </a>
+                      </Button>
+                    )
                   )}
                 </div>
               </CardContent>

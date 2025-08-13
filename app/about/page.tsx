@@ -22,12 +22,15 @@ export default function AboutPage() {
               <Link href="/events" className="text-foreground hover:text-primary">
                 Etkinlikler
               </Link>
+              <Link href="/atolyeler" className="text-foreground hover:text-primary">
+                Atölyeler
+              </Link>
               <Link href="/about" className="text-primary font-semibold">
                 Hakkımızda
               </Link>
               <Link href="/contact" className="text-foreground hover:text-primary">
                 İletişim
-              </Link>
+              </Link> 
             </div>
           </nav>
         </div>
@@ -46,8 +49,37 @@ export default function AboutPage() {
           <h1 className="text-4xl font-bold mb-4">Hakkımızda</h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             2010 yılından beri sanat severlere hizmet veren Ortak Sahne, kaliteli tiyatro oyunları ve kültürel
-            etkinliklerle İstanbul'un en önemli sanat merkezlerinden biri haline gelmiştir.
+            etkinliklerle Türkiye'nin en önemli sanat merkezlerinden biri haline gelmiştir.
           </p>
+        </div>
+
+        {/* Ortak Sahne Hakkında (Detay) */}
+        <div className="max-w-4xl mx-auto mb-12">
+          <div className="bg-card rounded-2xl p-6 md:p-8 shadow-lg border border-border/50">
+            <h2 className="text-3xl font-bold mb-6">Ortak Sahne Hakkında</h2>
+            <div className="space-y-4 text-muted-foreground leading-relaxed">
+              <p>
+                Ortak Sahne, 2014 yılı Şubat ayında Mahmut Ünver tarafından kurulan özel bir prodüksiyon tiyatrosudur. 
+                Oyuncuların ve tiyatroların çalışma şekillerine ve koşullarına farklı bir anlayış getirmek üzere yola çıkmıştır.
+              </p>
+              <p>
+                2014 yılında İzmir ve Hatay şubelerinde oyunculuk, konservatuvar hazırlık ve drama eğitimleri verilmeye başlandı. 
+                Aynı yıl Ege Tıp Oyuncuları ve Dokuz Eylül Tıp Oyuncularının oyun organizasyonları üstlenildi. 
+                Ege Üniversitesi Eczacılık Fakültesi ile Aşık Veysel Görme Engelliler Okulu’nun ortak çalışması olan “BENDE VARIM, BURADAYIM” 
+                projesine destek verilerek projenin tiyatro oyunu prodüksiyonu gerçekleştirildi.
+              </p>
+              <p>
+                2014 – 2015 sezonu Kandemir Konduk’un yazdığı “Yeni Yasaklar” adlı oyun ile açıldı; güncel taşlamalarla günümüz yasaklarına 
+                yeni bir eleştiri getirildi. Sonraki sezonlarda iki yetişkin oyunu ve bir çocuk oyunuyla perde açan Ortak Sahne, 
+                çeşitli tiyatroların oyunlarını da seyirciyle buluşturmaya devam etti.
+              </p>
+              <p>
+                “Tiyatroların Ortak Sahnesi” anlayışıyla; dileyen tiyatrolara gişe ve reklam desteği verilmekte, oyun ve/veya turne 
+                organizasyonları üstlenilmekte ve kendi oyuncularıyla prodüksiyonlar gerçekleştirilmektedir. Ortak Sahne’nin herhangi bir kurum, 
+                kuruluş, dernek ya da vakıfla bağlantısı yoktur; tamamen özel ve ismi tescilli bir markadır.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Stats */}
@@ -83,32 +115,31 @@ export default function AboutPage() {
         </div>
 
         {/* Main Content */}
-        <div className="grid lg:grid-cols-2 gap-12 items-center mb-12">
+          <div className="grid lg:grid-cols-2 gap-12 items-center mb-12">
           <div>
             <h2 className="text-3xl font-bold mb-6">Misyonumuz</h2>
             <div className="space-y-4 text-muted-foreground">
               <p>
-                Ortak Sahne olarak, sanatın toplumsal dönüşümdeki gücüne inanıyor ve bu gücü izleyicilerimizle
-                paylaşmayı amaçlıyoruz. Klasik eserlerden çağdaş oyunlara, çocuk tiyatrosundan müzikallere kadar geniş
-                bir repertuvarla her yaştan izleyiciye hitap ediyoruz.
+                Oyuncuların ve tiyatroların çalışma şekillerine farklı bir anlayış kazandırmak; eğitim, prodüksiyon ve 
+                organizasyon desteğiyle tiyatro ekosistemini güçlendirmek.
               </p>
               <p>
-                Deneyimli oyuncu kadromuz, yaratıcı yönetmenlerimiz ve teknik ekibimizle her oyunu özenle hazırlıyor,
-                izleyicilerimize unutulmaz deneyimler sunuyoruz.
+                İzmir ve Hatay başta olmak üzere; oyunculuk, konservatuvar hazırlık ve drama eğitimleriyle genç yeteneklerin 
+                gelişimini desteklemek; bağımsız tiyatroların oyun ve turne organizasyonlarını üstlenmek.
               </p>
               <p>
-                Sanatın evrensel dilini konuşarak, farklı kültürlerden insanları bir araya getirmeyi ve ortak bir sahne
-                yaratmayı hedefliyoruz.
+                “Tiyatroların Ortak Sahnesi” yaklaşımıyla; gişe ve reklam desteği sağlamak, kendi oyuncularımızla nitelikli 
+                prodüksiyonlar üretmek ve tiyatroyu her yaştan izleyiciyle buluşturmak.
               </p>
             </div>
-          </div>
-          <div className="aspect-[5/7]">
-            <img
-              src="/placeholder.svg"
-              alt="Tiyatro Sahnesi"
-              className="w-full h-full object-cover rounded-lg"
-            />
-          </div>
+            </div>
+            <div className="h-40 sm:h-56 md:h-72 lg:h-80">
+              <img
+                src="/placeholder.svg"
+                alt="Tiyatro Sahnesi"
+                className="w-full h-full object-cover rounded-lg"
+              />
+            </div>
         </div>
 
         {/* Vision */}
@@ -117,20 +148,20 @@ export default function AboutPage() {
             <h2 className="text-3xl font-bold mb-6">Vizyonumuz</h2>
             <div className="space-y-4 text-muted-foreground">
               <p>
-                Türkiye'nin en prestijli tiyatro sahnelerinden biri olmak ve uluslararası arenada tanınan bir sanat
-                kurumu haline gelmek vizyonumuzun temelini oluşturuyor.
+                Türkiye’de bağımsız tiyatroların buluştuğu en kapsayıcı platform olmak; yerelden ulusala ve uluslararası 
+                düzeye uzanan sürdürülebilir bir tiyatro ağı kurmak.
               </p>
               <p>
-                Genç sanatçılara fırsat tanıyarak, gelecek nesil tiyatro oyuncularının yetişmesine katkıda bulunmak ve
-                sanat eğitimi alanında öncü olmak istiyoruz.
+                Genç sanatçıların yetişmesine katkı sunan, erişilebilir ve kapsayıcı sanatsal üretimi destekleyen; 
+                turne ve ortak yapımlarla daha geniş kitlelere ulaşan bir yapı olmak.
               </p>
               <p>
-                Teknoloji ile sanatı harmanlayarak, çağdaş sahne sanatlarında yenilikçi yaklaşımlar geliştirmek ve
-                izleyici deneyimini sürekli iyileştirmek hedeflerimiz arasında yer alıyor.
+                Üretimde kaliteyi, iş birliklerinde şeffaflığı ve izleyici deneyiminde mükemmelliği esas alan bir 
+                tiyatro ekosistemine öncülük etmek.
               </p>
             </div>
           </div>
-          <div className="lg:order-1 aspect-[5/7]">
+          <div className="lg:order-1 h-40 sm:h-56 md:h-72 lg:h-80">
             <img
               src="/placeholder.svg?height=400&width=600"
               alt="Tiyatro İzleyicileri"

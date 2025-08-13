@@ -26,6 +26,9 @@ export default function ContactPage() {
               <Link href="/events" className="text-foreground hover:text-primary">
                 Etkinlikler
               </Link>
+              <Link href="/atolyeler" className="text-foreground hover:text-primary">
+                Atölyeler
+              </Link>
               <Link href="/about" className="text-foreground hover:text-primary">
                 Hakkımızda
               </Link>
